@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -36,10 +37,10 @@ public class BookingServiceImpl implements BookingService {
         if (flight.getAvailableSeats() > 0) {
             flight.setAvailableSeats(flight.getAvailableSeats() - 1);
             restTemplate.put(DATASERVICE_FLIGHT_URL +"/"+ flight.getFlightId(), flight );
-            booking.setUserId(user.getUserId());
-            booking.setFlightId(flight.getFlightId());
-             booking.setStatus("Booked");
-            return restTemplate.postForObject(DATASERVICE_BOOKING_URL,booking,Booking.class);
+            booking.setUser(user);
+            booking.setFlight(flight);
+            booking.setStatus("Booked");
+            return restTemplate.postForObject(DATASERVICE_BOOKING_URL,booking, Booking.class);
 
 
         } else {
@@ -48,7 +49,7 @@ public class BookingServiceImpl implements BookingService {
     }
     @Override
     public List<Booking> getBookingdetailsBybookingId(Long bookingId) {
-        Booking booking=restTemplate.getForObject(DATASERVICE_BOOKING_URL +"/" +bookingId ,Booking.class);
+        Booking booking=restTemplate.getForObject(DATASERVICE_BOOKING_URL +"/" +bookingId , Booking.class);
         List<Booking> bookings = new ArrayList<>();
         if (booking != null) {
             bookings.add(booking);
@@ -58,14 +59,22 @@ public class BookingServiceImpl implements BookingService {
     }
     @Override
     public List<Booking> getUserBookingsByuserId(Long userId) {
-        return restTemplate.exchange(DATASERVICE_BOOKING_URL + "/user/" + userId,
-                HttpMethod.GET, null, new ParameterizedTypeReference<List<Booking>>() {}).getBody();
+        //Booking booking=new Booking();
+        User user = restTemplate.getForObject(DATASERVICE_USER_URL +"/"+ userId ,User.class);
+        String url = DATASERVICE_BOOKING_URL + "?userId=" + userId;
+        List<Booking> bookings = restTemplate.exchange(
+                url, HttpMethod.GET, null, new ParameterizedTypeReference<List<Booking>>() {}
+        ).getBody();
+
+        // Return the list of bookings. If no bookings are found, return an empty list.
+        return bookings != null ? bookings : Collections.emptyList();
+
     }
 
     @Override
     public void cancelBookingBybookingId(Long bookingId) {
         restTemplate.delete(DATASERVICE_BOOKING_URL + "/" + bookingId);
-       Booking booking=new Booking();
+        Booking booking=new Booking();
         booking.setStatus("Cancelled");
        // restTemplate.put(DATASERVICE_BOOKING_URL +"/"+ bookingId, booking);*/
     }
